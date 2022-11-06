@@ -1,5 +1,11 @@
 from command_map import commands_map
 
+debug_level=0
+
+def debug(message):
+  if debug_level > 0:
+    print(message)
+
 class Condition:
   def __init__(self, predicate, arg_source):
     self.predicate = predicate
@@ -62,33 +68,43 @@ class CommandQueue:
     return ' '.join([str(x) for x in self.commands])
 
   def __call__(self):
-    print(f"COMMANDS TO RUN: {self}")
+    debug(f"COMMANDS TO RUN: {self}")
     for command in self.commands:
-      print(f"COMMAND RUNNING: {command.name}")
-      print(f"INITIAL ARGS: {command.args}")
-      print(f"AND ARG SOURCE: {self.results} WITH KEY {command.arg_source}   ** LEN ARG SOURCE: {len(command.arg_source)}")
+      debug(f"COMMAND RUNNING: {command.name}")
+      debug(f"INITIAL ARGS: {command.args}")
+      debug(f"AND ARG SOURCE: {self.results} WITH KEY {command.arg_source}")
       input("PRESS ENTER TO CONTINUE")
-      if command.arg_source and len(command.arg_source) == 1:
-        arg_source_args = [self.results[command.arg_source]]
+      if command.arg_source is not None:
+        debug(f"** LEN ARG SOURCE: {len(command.arg_source)}")
+        debug(f"EEEH: {[x for x in command.arg_source if x in ['A', 'B', 'C']]}")
+
+      if command.arg_source and len([x for x in command.arg_source if x in ["A", "B", "C"]]) > 0:
+        arg_source_args = []
+        if isinstance(command.arg_source, list):
+          for x in command.arg_source:
+            arg_source_args.append(self.results[x])
+        else:
+          arg_source_args = [self.results[command.arg_source]]
         for arg in command.args:
           arg_source_args.append(arg)
-        print(f"ARG SOURCE ARGS: {arg_source_args}")
+        debug(f"ARG SOURCE ARGS: {arg_source_args}")
         command.args = arg_source_args
       elif command.arg_source:
         fxn_name, fxn_args = command.arg_source
         if fxn_name not in commands_map:
           raise Exception("Unknown function for argument source")
         fxn = commands_map[fxn_name]
-        print(f"FXN: {fxn} ARGS = {fxn_args}")
+        debug(f"FXN: {fxn} ARGS = {fxn_args}")
         arg_source_args = [fxn(*fxn_args)]
         for arg in command.args:
           arg_source_args.append(arg)
-        print(f"ARG SOURCE ARGS: {arg_source_args}")
+        debug(f"ARG SOURCE ARGS: {arg_source_args}")
         command.args = arg_source_args
         
-      print(f"ARGS: {command.args}")
+      debug(f"ARGS: {command.args}")
       result = command()
       self.results[command.result_dest] = result
+      debug(f"SELF RESULTS: {self.results}")
 
   def clear_results(self):
     return {"A": [], "B": [], "C": []}
@@ -99,10 +115,10 @@ class Orchestrator:
     self.command_units = command_units
 
   def __call__(self):
-    print(f"COMMAND UNITS: {self.command_units}")
+    debug(f"COMMAND UNITS: {self.command_units}")
     for command_unit in self.command_units:
       input("Beginning next command...")
       command_unit()
-      #print("Finished...")
+      #debug("Finished...")
 
     #[x() for x in self.command_units]

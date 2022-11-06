@@ -26,5 +26,6 @@ commands_map = {
   "move_mapped_files": fmc.move_mapped_files,
   "move_files_to_dir": fmc.move_files_to_dir,
   "remove_files": fmc.remove_files,
-  "unzip_files": zc.unzip_files_in_dir
+  "unzip_files": zc.unzip_files_in_dir,
+  "get_unique_extensions": fc.get_unique_extensions
 }

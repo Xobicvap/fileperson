@@ -2,26 +2,52 @@
 bucket_max = 10
 bucket_name_part_max = 4
 
-ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyz"
+ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-def arrange_command(filenames):
+def arrange_command(coll):
+  filenames = [f for f in coll.file_collection()]
   return subdivide_alpha_buckets(arrange_in_alphabetical_buckets(filenames))
+
+def group_command(coll):
+  filenames = get_files(coll)
+  return group_by_similar_name(filenames)
+
+def get_files(coll):
+  return [f for f in coll.file_collection()]
+
+def get_unique_extensions(coll):
+  uniques = []
+  for f in coll.file_collection():
+    ext = "." + f.split(".")[-1]
+    if len(ext) == 4 and ext not in uniques:
+      uniques.append(ext)
+  print(f"UNIQUE EXTENSIONS: {uniques}")
+  return uniques
 
 def arrange_in_alphabetical_buckets(filenames):
   alpha_buckets = {}
   for filename in filenames:
-    alpha_idx = ALPHANUMERIC.index(filename[0])
-    c = ALPHANUMERIC[alpha_idx]
-    if c not in alpha_buckets:
-      alpha_buckets[c] = []
-    alpha_buckets[c].append(filename)
+    try:
+      alpha_idx = ALPHANUMERIC.index(filename[0])
+      c = ALPHANUMERIC[alpha_idx]
+      normalized = c.lower()
+      if normalized not in alpha_buckets:
+        alpha_buckets[normalized] = []
+      alpha_buckets[normalized].append(filename)
+    except ValueError:
+      print(f"character 0 of {filename}, {filename[0]}, not alphanumeric")
   return alpha_buckets
 
 def subdivide_alpha_buckets(alpha_buckets):
   subdivided = {}
   for c in ALPHANUMERIC:
-    current_list = alpha_buckets[c]
-    subdivided[c] = arrange_in_buckets(current_list)
+    if c in alpha_buckets:
+      current_list = alpha_buckets[c]
+      
+      if bucket_max < len(current_list):
+        subdivided[c] = arrange_in_buckets(current_list)
+      else:
+        subdivided[c] = current_list
   return subdivided
 
 def group_by_similar_name(filenames):
@@ -45,9 +71,11 @@ def group_by_similar_name(filenames):
       else:
         group = False
       i += 1
-  return file_map
+  print(f"FILE MAP: {file_map}")
+  return {"disks": file_map}
 
-def strip_text_from_files(filenames, text):
+def strip_text_from_files(coll, text):
+  filenames = get_files()
   stripping = {}
   for filename in filenames:
     if text in filename:
@@ -55,6 +83,7 @@ def strip_text_from_files(filenames, text):
   return stripping
 
 def arrange_in_buckets(filenames):
+  sorted(filenames)
   list_len = len(filenames)
   bucketed = {}
   i = 0

@@ -10,6 +10,7 @@ def get_file_list(dirpath, filter=""):
   for x in p.iterdir():
     item = None
     if x.is_dir():
+      print(f"DIRECTORY: {x}")
       subcoll = get_file_list(x, filter)
       coll.add(subcoll)
     if len(filter) > 0:
@@ -19,7 +20,22 @@ def get_file_list(dirpath, filter=""):
       item = FileItem(str(x), x.name, x.suffix, x.is_dir())
     if item is not None:
       coll.add(item)
+  coll.list_files()
   return coll
+
+def rename_files(coll):
+  newcoll = FileItemCollection()
+  for basename, item in coll.file_collection().items():
+    print(f"BASENAME: {basename}")
+    renamefile = basename.lower()
+    renamepath = Path(item.source_path)
+    parentpath = renamepath.parent
+    renamed = renamepath.rename(parentpath.joinpath(renamefile))
+    renamed_item = FileItem(basename, renamed.name, renamed.suffix, renamed.is_dir())
+    print(f"RENAMED TO: {renamed_item.base_name}")
+    newcoll.add(renamed_item)
+  return newcoll
+
 
 def move_files_to_dir(coll, destpath, dry_run=False, copy=False):
   dest = Path(destpath)
@@ -49,9 +65,10 @@ def remove_files(coll, dry_run=False):
 
 def move_mapped_files(sourcecoll, mapped_files, destroot, dry_run=False, copy=False):
   mapped_items = mapped_files.items()
+  print(f"MAPPED ITEMS: {mapped_items}")
   mi_iter = iter(mapped_items)
   pathmap = transform_map_to_paths(mi_iter, destroot)
-  for basename, destpath in pathmap:
+  for basename, destpath in pathmap.items():
     if basename in sourcecoll:
       dest = Path(destpath).parent
       if not dest.exists:
@@ -66,21 +83,31 @@ def move_mapped_files(sourcecoll, mapped_files, destroot, dry_run=False, copy=Fa
         print(f"Moving {sourcecoll[basename].source_path} to {destpath}")
         if not dry_run:
           filesource = Path(sourcecoll[basename].source_path)
-          filesource.rename(Path(destpath))
+          filedest = Path(destpath)
+          parentdir = filedest.resolve().parent
+          if not parentdir.exists():
+            parentdir.mkdir(parents=True, exist_ok=True)
+
+          filesource.rename(filedest)
   
 def transform_map_to_paths(mi_iter, current_path=""):
   looping = True
   pathmap = {}
   while looping:
     try:
-      dirname, subitem = next(mi_iter)
-      if isinstance(subitem, List):
+      result = next(mi_iter)
+      print(f"RESULT: {result}, CURRENT PATH: {current_path}")
+      dirname, subitem = result
+      if isinstance(subitem, list):
+        print(f"SUBITEM: {subitem} {type(subitem)}")
         for filename in subitem:
            pathmap[filename] = str(Path(current_path).joinpath(dirname).joinpath(filename))
-      elif isinstance(subitem, Dict):
-        pathmap = transform_map_to_paths(iter(subitem), str(Path(current_path).joinpath(dirname)))
+      elif isinstance(subitem, dict):
+        print(f"SUBITEM DICT: {subitem} {type(subitem)}")
+        pathmap.update(transform_map_to_paths(iter(subitem.items()), str(Path(current_path).joinpath(dirname))))
     except StopIteration:
       looping = False
+  print(f"PATHMAP: {pathmap}")
   return pathmap
 
 
